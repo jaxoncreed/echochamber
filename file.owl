@@ -1,0 +1,49 @@
+Prefix(:=<http://chat.o.team#>)
+Prefix(ec:=<http://echochamber.o.team#>)
+Prefix(example:=<http://example.com#>)
+
+Ontology(<http://chat.o.team>
+
+###################################################################
+# Declare Classes
+###################################################################
+Declaration(Class(:Person))
+Declaration(Class(:Conversation))
+Declaration(Class(:Webhook))
+Declaration(Class(:Admin))
+SubClassOf(:Admin :Person)
+
+###################################################################
+# Declare Object Properties
+###################################################################
+Declaration(ObjectProperty(:memberOf))
+Declaration(ObjectProperty(:hasMessage))
+
+###################################################################
+# Define Individuals
+###################################################################
+Declaration(NamedIndividual(:UserA))
+ClassAssertion(:Person :UserA)
+ObjectPropertyAssertion(:memberOf :UserA :ChatroomA)
+DataPropertyAssertion(:chatWebhook :UserA "http://example.com/B"^^xsd:string)
+
+Declaration(NamedIndividual(:UserB))
+ClassAssertion(:Person :UserB)
+ObjectPropertyAssertion(:memberOf :UserB :ChatroomB)
+DataPropertyAssertion(:chatWebhook :UserB "http://example.com/B"^^xsd:string)
+
+Declaration(NamedIndividual(:UserC))
+ClassAssertion(:Person :UserC)
+ClassAssertion(:Admin :UserC)
+DataPropertyAssertion(:chatWebhook :UserC "http://example.com/C"^^xsd:string)
+
+Declaration(NamedIndividual(:ChatroomA))
+ClassAssertion(:Conversation :ChatroomA)
+DataPropertyAssertion(:hasMessage :ChatroomA "TextA1"^^xsd:string)
+DataPropertyAssertion(:hasMessage :ChatroomA "TextA2"^^xsd:string)
+
+Declaration(NamedIndividual(:CatroomB))
+ClassAssertion(:Conversation :ChatroomB)
+DataPropertyAssertion(:hasMessage :ChatroomB "TextB1"^^xsd:string)
+DataPropertyAssertion(:hasMessage :ChatroomB "TextB2"^^xsd:string)
+)
