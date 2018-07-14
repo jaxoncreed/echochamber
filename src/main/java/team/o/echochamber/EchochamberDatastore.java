@@ -9,15 +9,18 @@ import org.swrlapi.sqwrl.SQWRLQueryEngine;
 import org.swrlapi.sqwrl.SQWRLResult;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.Optional;
+import java.net.URI;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class EchochamberDatastore {
     private OWLOntologyManager m;
     private OWLDataFactory f;
     private OWLOntology ontology;
     private SWRLRuleEngine ruleEngine;
+    private SQWRLQueryEngine queryEngine;
 
+    private String base;
     private String ec = "http://echachamber.o.team#";
 
     private OWLClass Action;
@@ -31,9 +34,14 @@ public class EchochamberDatastore {
     private OWLDataProperty o;
     private OWLObjectProperty shouldUpdate;
 
+    private List<String> rules;
+
     private void init() {
-        m.getOntologyFormat(ontology).asPrefixOWLOntologyFormat().setDefaultPrefix(ontology.getOntologyID().getOntologyIRI().toString() + "#");
+        base = ontology.getOntologyID().getOntologyIRI().get().toString() + "#";
+        m.getOntologyFormat(ontology).asPrefixOWLOntologyFormat().setDefaultPrefix(base);
         m.getOntologyFormat(ontology).asPrefixOWLOntologyFormat().setPrefix("ec", ec);
+
+        rules = new ArrayList<>();
 
         Action = f.getOWLClass(IRI.create(ec + "Action"));
         AddedAction = f.getOWLClass(IRI.create(ec + "AddedAction"));
@@ -60,19 +68,12 @@ public class EchochamberDatastore {
         ecChanges.add(new AddAxiom(ontology, f.getOWLDeclarationAxiom(o)));
         ecChanges.add(new AddAxiom(ontology, f.getOWLDeclarationAxiom(shouldUpdate)));
 
-        System.out.println("before apply change");
-
         m.applyChanges(ecChanges);
 
         ruleEngine = SWRLAPIFactory.createSWRLRuleEngine(ontology);
-
-        System.out.println("after define rule engine");
+        queryEngine = SWRLAPIFactory.createSQWRLQueryEngine(ontology);
 
         ruleEngine.infer();
-
-        System.out.println("after infer");
-
-        printOntology();
     }
 
     private void printOntology() {
@@ -109,7 +110,7 @@ public class EchochamberDatastore {
      * @param rule a SWRL rule
      */
     public void addRule(String rule) {
-
+        rules.add(rule);
     }
 
     /**
@@ -119,7 +120,55 @@ public class EchochamberDatastore {
      * @param object
      */
     public void addTriple(String subject, String predicate, String object) {
+        // Initialize the variables for needed axioms
+        UUID uuid = UUID.randomUUID();
+        OWLIndividual action = f.getOWLNamedIndividual(IRI.create(ec + "action" + uuid));
+        OWLIndividual triple = f.getOWLNamedIndividual(IRI.create(ec + "triple1" + uuid));
+        OWLIndividual Subject = f.getOWLNamedIndividual(IRI.create(base + subject));
+        OWLDataProperty Predicate = f.getOWLDataProperty(IRI.create(base + predicate));
+        OWLIndividual PredicateIndividual = f.getOWLNamedIndividual(IRI.create(base + predicate));
 
+        // Add the triple
+        ArrayList<OWLOntologyChange> changes = new ArrayList<>();
+        changes.add(new AddAxiom(ontology, f.getOWLDataPropertyAssertionAxiom(Predicate, Subject, object)));
+
+        // Add the action representing the triple
+        changes.add(new AddAxiom(ontology, f.getOWLClassAssertionAxiom(AddedAction, action)));
+        changes.add(new AddAxiom(ontology, f.getOWLObjectPropertyAssertionAxiom(actionTriple, action, triple)));
+        changes.add(new AddAxiom(ontology, f.getOWLObjectPropertyAssertionAxiom(s, triple, Subject)));
+        changes.add(new AddAxiom(ontology, f.getOWLObjectPropertyAssertionAxiom(p, triple, PredicateIndividual)));
+        changes.add(new AddAxiom(ontology, f.getOWLDataPropertyAssertionAxiom(o, triple, object)));
+
+        m.applyChanges(changes);
+
+        printOntology();
+
+        // Run sqwrl query
+        List<String> routesToQuery = new ArrayList<>();
+        for (String rule : rules) {
+            try {
+                SQWRLResult result = queryEngine.runSQWRLQuery("q" + uuid, rule);
+                if (result.next()) {
+                    routesToQuery.addAll(
+                        Arrays.asList(result.getColumn("webhook").toArray())
+                                .stream().map(i -> i.toString()).collect(Collectors.toList())
+                    );
+                    result.getColumn("webhook").toArray();
+                }
+            } catch(Exception e) {
+                System.err.println(e);
+            }
+
+        }
+        for (String url : routesToQuery) {
+            callWebhook(URI.create(url.substring(1, url.length() - 13)));
+        }
+
+    }
+
+    private void callWebhook(URI url) {
+        // Perform actual query here
+        System.out.println(url);
     }
 
 }
