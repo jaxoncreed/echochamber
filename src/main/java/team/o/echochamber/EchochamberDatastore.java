@@ -119,7 +119,7 @@ public class EchochamberDatastore {
      * @param predicate
      * @param object
      */
-    public void addTriple(String subject, String predicate, String object) {
+    public void addDataPropertyTriple(String subject, String predicate, String object) {
         // Initialize the variables for needed axioms
         UUID uuid = UUID.randomUUID();
         OWLIndividual action = f.getOWLNamedIndividual(IRI.create(ec + "action" + uuid));

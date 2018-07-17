@@ -14,7 +14,7 @@ public class EchochamberApplication {
             datastore.addRule("ec:AddedAction(?action) ^ ec:actionTriple(?action, ?actionTriple) ^ " +
                     "ec:p(?actionTriple, hasMessage) ^ ec:s(?actionTriple, ?chatRoom) ^ " +
                     "memberOf(?user, ?chatRoom) ^ chatWebhook(?user, ?webhook)  -> sqwrl:select(?webhook)");
-            datastore.addTriple("ChatroomB", "hasMessage", "Hello");
+            datastore.addDataPropertyTriple("ChatroomB", "hasMessage", "Hello");
 		} catch (Exception e) {
 		    System.err.println(e);
         }
